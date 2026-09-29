@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react'
-import { GoogleAuthProvider, getRedirectResult, onAuthStateChanged, signInWithRedirect, signOut } from 'firebase/auth'
+import {
+  GoogleAuthProvider,
+  getRedirectResult,
+  onAuthStateChanged,
+  signInWithPopup,
+  signInWithRedirect,
+  signOut,
+} from 'firebase/auth'
 import { auth, authorizedEmail, firebaseReady } from './firebaseConfig.js'
 import { createDose, deleteDose, subscribeToDoses, updateDose } from './features/doses/doseService.js'
 import { createLocalDose, deleteLocalDose, readLocalDoses, updateLocalDose, writeLocalDoses } from './features/doses/localDoseStore.js'
@@ -381,22 +388,50 @@ function App() {
   const nextDose = pendingDoses[0] ?? forecast
 
   async function handleLogin() {
-    if (!firebaseReady) return
+    if (!firebaseReady || !auth) return
     setAuthBusy(true)
     setError('')
     setErrorDetails('')
     try {
-      sessionStorage.setItem('testo-date-auth-pending', 'google')
-      console.info('[testo-date] Firebase Auth / iniciando redirect Google', {
-        authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-        currentOrigin: window.location.origin,
-      })
       const provider = new GoogleAuthProvider()
       provider.setCustomParameters({ prompt: 'select_account' })
-      await signInWithRedirect(auth, provider)
+
+      const preferRedirect = window.matchMedia('(max-width: 768px)').matches
+        || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+        || window.matchMedia('(display-mode: standalone)').matches
+
+      if (preferRedirect) {
+        sessionStorage.setItem('testo-date-auth-pending', 'google')
+        console.info('[testo-date] Firebase Auth / iniciando redirect Google', {
+          authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'testo-date.firebaseapp.com',
+          currentOrigin: window.location.origin,
+          preferRedirect,
+        })
+        await signInWithRedirect(auth, provider)
+        return
+      }
+
+      try {
+        const result = await signInWithPopup(auth, provider)
+        if (result?.user?.email?.toLowerCase() !== authorizedEmail) {
+          throw new Error('A conta autenticada não está autorizada para este app.')
+        }
+        setUser(result.user)
+        setError('')
+        setErrorDetails('')
+        setAuthLoading(false)
+      } catch (popupError) {
+        if (popupError?.code === 'auth/popup-blocked' || popupError?.code === 'auth/popup-closed-by-user' || popupError?.message?.includes('popup')) {
+          sessionStorage.setItem('testo-date-auth-pending', 'google')
+          await signInWithRedirect(auth, provider)
+          return
+        }
+        throw popupError
+      }
     } catch (authError) {
       sessionStorage.removeItem('testo-date-auth-pending')
       reportFailure('Firebase Auth / iniciar login Google', authError, authErrorMessage(authError))
+    } finally {
       setAuthBusy(false)
     }
   }
@@ -420,12 +455,18 @@ function App() {
       localStorage.removeItem('testo-date-local-mode')
       setUser(null)
       setStorageMode('connecting')
+      setError('')
+      setErrorDetails('')
       setNotice('Sessão local encerrada.')
       return
     }
 
     try {
-      await signOut(auth)
+      sessionStorage.removeItem('testo-date-auth-pending')
+      if (auth) await signOut(auth)
+      setUser(null)
+      setError('')
+      setErrorDetails('')
       setNotice('Sessão encerrada.')
     } catch (authError) {
       setError(authError.message)
@@ -608,11 +649,14 @@ function App() {
           <button className="icon-button theme-button" type="button" onClick={() => setDarkMode((value) => !value)} aria-label={darkMode ? 'Ativar modo claro' : 'Ativar modo escuro'} title={darkMode ? 'Modo claro' : 'Modo escuro'}>
             {darkMode ? '☼' : '☾'}
           </button>
-          <button className="account-button" type="button" onClick={handleSignOut} title="Encerrar sessão">
-            <span className="account-avatar">{user.displayName?.charAt(0) ?? 'U'}</span>
-            <span className="account-name">{user.displayName?.split(' ')[0] ?? 'Conta'}</span>
-            <span className="signout-icon" aria-hidden="true">↗</span>
-          </button>
+          <div className="account-menu">
+            <button className="account-button" type="button" title="Perfil da conta">
+              <span className="account-avatar">{user.displayName?.charAt(0) ?? 'U'}</span>
+              <span className="account-name">{user.displayName?.split(' ')[0] ?? 'Conta'}</span>
+              <span className="signout-icon" aria-hidden="true">▾</span>
+            </button>
+            <button className="account-menu-action" type="button" onClick={handleSignOut}>Sair da conta</button>
+          </div>
         </div>
       </header>
 
@@ -676,7 +720,7 @@ function App() {
               <div className="empty-next">
                 <h2>Nenhuma aplicação registrada</h2>
                 <p>Registre uma aplicação para iniciar seu histórico.</p>
-                <button className="next-edit" type="button" onClick={openNewDose}>Adicionar primeiro registro <span aria-hidden="true">↗</span></button>
+                <button className="next-edit" type="button" onClick={openNewDose}>Registrar primeira dose <span aria-hidden="true">↗</span></button>
               </div>
             )}
           </article>
