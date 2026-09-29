@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/doses/{doseId} {
+      function ownsDose() {
+        return request.auth != null
+          && request.auth.token.email_verified == true
+          && request.auth.token.email == 'calazansvendas@gmail.com'
+          && request.auth.uid == userId;
+      }
+
+      function validDose() {
+        return request.resource.data.keys().hasAll(['id', 'dataHora', 'status', 'observacao', 'dataCriacao'])
+          && request.resource.data.keys().hasOnly(['id', 'dataHora', 'status', 'observacao', 'dataCriacao'])
+          && request.resource.data.id == doseId
+          && request.resource.data.dataHora is string
+          && request.resource.data.dataHora.size() > 0
+          && request.resource.data.status in ['Concluído', 'Pendente']
+          && request.resource.data.observacao is string
+          && request.resource.data.observacao.size() <= 4000
+          && request.resource.data.dataCriacao is timestamp;
+      }
+
+      allow read: if ownsDose();
+      allow create: if ownsDose() && validDose() && request.resource.data.dataCriacao == request.time;
+      allow update: if ownsDose()
+        && validDose()
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.dataCriacao == resource.data.dataCriacao;
+      allow delete: if ownsDose();
+    }
+  }
+}

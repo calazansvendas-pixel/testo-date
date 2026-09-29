@@ -1,0 +1,96 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  font-family: 'Manrope', 'Avenir Next', sans-serif;
+  color: #0A142F;
+  background: #E4E9F0;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  color-scheme: light;
+  --page: #E4E9F0;
+  --surface: #FFFFFF;
+  --surface-alt: #F4F6F9;
+  --ink: #0A142F;
+  --muted: #66738A;
+  --line: #CCD5E1;
+  --blue: #1A3E95;
+  --blue-hover: #15357E;
+  --blue-soft: #EDF2FF;
+  --green: #19734B;
+  --green-soft: #EAF6EF;
+  --amber: #8A5A0A;
+  --amber-soft: #FFF3D9;
+  --danger: #B42335;
+  --danger-soft: #FFF0F1;
+  --shadow: 0 2px 5px rgb(10 20 47 / 5%), 0 14px 32px rgb(10 20 47 / 6%);
+}
+
+.dark {
+  color-scheme: dark;
+  --page: #0A142F;
+  --surface: #111F42;
+  --surface-alt: #17284E;
+  --ink: #FFFFFF;
+  --muted: #B5C0D3;
+  --line: #344667;
+  --blue: #7295F1;
+  --blue-hover: #8FAAFF;
+  --blue-soft: #1B2F59;
+  --green: #81D2A7;
+  --green-soft: #173E36;
+  --amber: #F4CB77;
+  --amber-soft: #493817;
+  --danger: #FF9BA5;
+  --danger-soft: #49232C;
+  --shadow: 0 8px 32px rgb(0 0 0 / 18%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  color: var(--ink);
+  background: radial-gradient(ellipse at 15% 0%, rgb(255 255 255 / 50%), transparent 40%), var(--page);
+  transition: color 180ms ease, background-color 180ms ease;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgb(26 62 149 / 35%);
+  outline-offset: 2px;
+}
+
+::selection {
+  color: #FFFFFF;
+  background: #1A3E95;
+}
