@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import {
   GoogleAuthProvider,
+  browserLocalPersistence,
   getRedirectResult,
   onAuthStateChanged,
+  setPersistence,
   signInWithPopup,
   signInWithRedirect,
   signOut,
@@ -188,50 +190,65 @@ function App() {
       return undefined
     }
 
-    if (!firebaseReady) {
+    if (!firebaseReady || !auth) {
       setAuthLoading(false)
       return undefined
     }
 
-    const redirectPending = sessionStorage.getItem('testo-date-auth-pending') === 'google'
-    let redirectResolved = !redirectPending
-    let initialAuthResolved = false
     let active = true
+    const redirectPending = sessionStorage.getItem('testo-date-auth-pending') === 'google'
 
-    function resolveRedirectWithoutSession() {
-      if (!active || !redirectPending || !redirectResolved || !initialAuthResolved || auth.currentUser) return
-
-      sessionStorage.removeItem('testo-date-auth-pending')
-      reportFailure(
-        'Firebase Auth / retorno Google',
-        new Error('O redirect terminou sem resultado nem usuário autenticado.'),
-        'O Google fechou, mas não devolveu uma sessão ao app. Confira se o provedor Google está ativo e se localhost/domínio atual está autorizado no Firebase Authentication.',
-      )
-      setAuthLoading(false)
-    }
-
-    getRedirectResult(auth).then((result) => {
-      console.info('[testo-date] Firebase Auth / resultado do redirect', {
-        returnedUser: Boolean(result?.user),
-        currentUser: Boolean(auth.currentUser),
-      })
-      redirectResolved = true
-      if (result?.user) {
-        sessionStorage.removeItem('testo-date-auth-pending')
-        setUser(result.user)
-        setAuthLoading(false)
-      }
-      resolveRedirectWithoutSession()
-    }).catch((authError) => {
-      redirectResolved = true
-      sessionStorage.removeItem('testo-date-auth-pending')
-      reportFailure('Firebase Auth / retorno Google', authError, authErrorMessage(authError))
-      setAuthLoading(false)
+    setPersistence(auth, browserLocalPersistence).catch((persistenceError) => {
+      console.warn('[testo-date] Firebase Auth / persistence local falhou', persistenceError)
     })
+
+    getRedirectResult(auth)
+      .then((result) => {
+        if (!active) return
+        console.info('[testo-date] Firebase Auth / resultado do redirect', {
+          returnedUser: Boolean(result?.user),
+          currentUser: Boolean(auth.currentUser),
+        })
+
+        if (result?.user) {
+          const userEmail = result.user.email?.toLowerCase()
+          if (userEmail !== authorizedEmail) {
+            sessionStorage.removeItem('testo-date-auth-pending')
+            setUser(null)
+            reportFailure(
+              'Firebase Auth / conta não autorizada',
+              new Error('A conta autenticada difere de VITE_AUTHORIZED_EMAIL.'),
+              'Esta conta Google não está autorizada. Entre com o e-mail configurado para este app.',
+            )
+            signOut(auth).catch((signOutError) => reportFailure('Firebase Auth / encerrar conta não autorizada', signOutError))
+            return
+          }
+
+          sessionStorage.removeItem('testo-date-auth-pending')
+          setError('')
+          setErrorDetails('')
+          setUser(result.user)
+          setAuthLoading(false)
+          return
+        }
+
+        if (redirectPending) {
+          sessionStorage.removeItem('testo-date-auth-pending')
+          reportFailure(
+            'Firebase Auth / retorno Google',
+            new Error('O redirect terminou sem usuário autenticado nesta sessão.'),
+            'O Google respondeu, mas o app não recebeu uma sessão válida. Verifique o domínio autorizado e a configuração do Firebase Authentication.',
+          )
+        }
+      })
+      .catch((authError) => {
+        if (!active) return
+        sessionStorage.removeItem('testo-date-auth-pending')
+        reportFailure('Firebase Auth / retorno Google', authError, authErrorMessage(authError))
+      })
 
     const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
       if (!active) return
-      initialAuthResolved = true
       console.info('[testo-date] Firebase Auth / estado observado', {
         signedIn: Boolean(nextUser),
         emailVerified: nextUser?.emailVerified ?? false,
@@ -254,11 +271,16 @@ function App() {
         sessionStorage.removeItem('testo-date-auth-pending')
         setError('')
         setErrorDetails('')
+        setUser(nextUser)
+        setAuthLoading(false)
+        return
       }
-      setUser(nextUser)
-      if (nextUser || !redirectPending) setAuthLoading(false)
-      resolveRedirectWithoutSession()
+
+      if (!redirectPending) {
+        setAuthLoading(false)
+      }
     }, (authError) => {
+      if (!active) return
       reportFailure('Firebase Auth / observar sessão', authError, authErrorMessage(authError))
       setAuthLoading(false)
     })
@@ -390,9 +412,11 @@ function App() {
   async function handleLogin() {
     if (!firebaseReady || !auth) return
     setAuthBusy(true)
+    setAuthLoading(true)
     setError('')
     setErrorDetails('')
     try {
+      await setPersistence(auth, browserLocalPersistence)
       const provider = new GoogleAuthProvider()
       provider.setCustomParameters({ prompt: 'select_account' })
 
@@ -431,6 +455,7 @@ function App() {
     } catch (authError) {
       sessionStorage.removeItem('testo-date-auth-pending')
       reportFailure('Firebase Auth / iniciar login Google', authError, authErrorMessage(authError))
+      setAuthLoading(false)
     } finally {
       setAuthBusy(false)
     }
@@ -623,7 +648,15 @@ function App() {
   }
 
   if (authLoading) {
-    return <main className="loading-screen"><span className="loading-mark" /><p>Carregando seus registros</p></main>
+    const isRedirectProcessing = sessionStorage.getItem('testo-date-auth-pending') === 'google'
+    return (
+      <main className="loading-screen">
+        <span className="loading-mark" />
+        <p>{isRedirectProcessing ? 'Autenticando sessão...' : 'Carregando seus registros'}</p>
+        {error && <p className="inline-error" role="alert">{error}</p>}
+        {errorDetails && <details className="error-details"><summary>Detalhes técnicos</summary><code>{errorDetails}</code></details>}
+      </main>
+    )
   }
 
   if (!user) return (
