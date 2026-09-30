@@ -26,6 +26,11 @@ const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
 })
 const timeFormatter = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' })
 
+function formatFullDate(date) {
+  const formatted = dateFormatter.format(date)
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1)
+}
+
 function formatCountdown(date, now) {
   const remaining = new Date(date).getTime() - now.getTime()
   if (remaining <= 0) return 'Data prevista alcançada'
@@ -88,8 +93,8 @@ function DoseRow({ dose, onEdit, onDelete, onToggleStatus }) {
       <button className="dose-row-main" type="button" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded}>
         <span className="dose-date-marker" aria-hidden="true"><span /></span>
         <span className="dose-row-date">
-          <strong>{dateFormatter.format(date)}</strong>
-          <small>{dose.diaSemana || 'Dia da semana'} • {timeFormatter.format(date)}</small>
+          <strong>{formatFullDate(date)}</strong>
+          <small>às {timeFormatter.format(date)}</small>
           <small className="dose-meta-row"><SideBadge side={dose.side || 'Direito'} /> {dose.localOnly && <span className="local-storage-note">Somente neste dispositivo</span>}</small>
         </span>
         <StatusBadge status={dose.status} />
@@ -701,7 +706,7 @@ function App() {
     <main className="app-shell">
       <header className="topbar">
         <a className="brand-lockup" href="#inicio" aria-label="testo-date início">
-          <span className="brand-symbol" aria-hidden="true"><span /></span>
+          <img className="brand-symbol" src="/assets/logo-calazans.png" alt="" aria-hidden="true" />
           <span>testo<span className="brand-dot">.</span>date</span>
         </a>
         <div className="topbar-actions">
@@ -768,7 +773,7 @@ function App() {
             {nextDose ? (
               <>
                 <p className="countdown">{formatCountdown(nextDose.dataHora, now)}</p>
-                <h2>{dateFormatter.format(new Date(nextDose.dataHora))}</h2>
+                <h2>{formatFullDate(new Date(nextDose.dataHora))}</h2>
                 <p className="next-time">às {timeFormatter.format(new Date(nextDose.dataHora))}</p>
                 <p className="next-side-suggestion">Próximo lado sugerido: {suggestedNextSide === 'Direito' ? 'Lado Direito' : 'Lado Esquerdo'}</p>
                 {nextDose.forecast && <p className="forecast-note">Previsão calculada a partir da última aplicação concluída + 10 dias.</p>}

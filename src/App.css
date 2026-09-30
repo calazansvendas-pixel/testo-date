@@ -32,55 +32,12 @@
 }
 
 .brand-symbol {
-  position: relative;
-  display: grid;
-  width: 32px;
-  height: 32px;
-  place-items: center;
-  border: 2px solid #1A3E95;
-  border-radius: 50%;
-}
-
-.brand-symbol::before,
-.brand-symbol::after,
-.brand-symbol span {
-  position: absolute;
   display: block;
-  content: '';
-  background: #1A3E95;
-  border-radius: 2px;
-}
-
-.brand-symbol::before {
-  width: 2px;
-  height: 9px;
-  top: 6px;
-}
-
-.brand-symbol::after {
-  width: 8px;
-  height: 2px;
-  right: 6px;
-  bottom: 9px;
-  transform: rotate(30deg);
-  transform-origin: left center;
-}
-
-.brand-symbol span {
-  z-index: 1;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-}
-
-.dark .brand-symbol {
-  border-color: #91ACFF;
-}
-
-.dark .brand-symbol::before,
-.dark .brand-symbol::after,
-.dark .brand-symbol span {
-  background: #91ACFF;
+  width: auto;
+  height: 44px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  object-fit: contain;
 }
 
 .topbar-actions {
@@ -453,7 +410,6 @@
   color: #FFFFFF;
   font-size: 16px;
   font-weight: 700;
-  text-transform: capitalize;
 }
 
 .next-time {
@@ -677,7 +633,6 @@
   font-size: 12px;
   font-weight: 800;
   text-overflow: ellipsis;
-  text-transform: capitalize;
   white-space: nowrap;
 }
 
@@ -1137,8 +1092,8 @@
   }
 
   .brand-symbol {
-    width: 29px;
-    height: 29px;
+    width: auto;
+    height: 38px;
   }
 
   .topbar-actions {
