@@ -9,7 +9,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['assets/logo-calazans.png'],
+      includeAssets: ['assets/logo-calazans.png', 'assets/apple-touch-icon.png'],
       manifest: {
         name: 'testo-date',
         short_name: 'testo-date',
@@ -20,8 +20,9 @@ export default defineConfig({
         display: 'standalone',
         start_url: '/',
         icons: [
-          { src: '/assets/logo-calazans.png', sizes: '125x118', type: 'image/png', purpose: 'any' },
-          { src: '/assets/logo-calazans.png', sizes: '125x118', type: 'image/png', purpose: 'maskable' },
+          { src: '/assets/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/assets/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/assets/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
@@ -29,4 +30,27 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+    },
+  },
+  build: {
+    chunkSizeWarningLimit: 500,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/firebase/auth') || id.includes('node_modules/@firebase/auth')) {
+            return 'firebase-auth'
+          }
+          if (id.includes('node_modules/firebase/firestore') || id.includes('node_modules/@firebase/firestore')) {
+            return 'firebase-firestore'
+          }
+          if (id.includes('node_modules/firebase') || id.includes('node_modules/@firebase')) {
+            return 'firebase-core'
+          }
+        },
+      },
+    },
+  },
 })

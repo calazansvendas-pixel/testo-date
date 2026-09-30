@@ -192,6 +192,12 @@ function App() {
   }, [darkMode])
 
   useEffect(() => {
+    if (!notice) return undefined
+    const timer = window.setTimeout(() => setNotice(''), 5000)
+    return () => window.clearTimeout(timer)
+  }, [notice])
+
+  useEffect(() => {
     if (localStorage.getItem('testo-date-local-mode') === 'true') {
       setUser({ uid: 'local-calazans', displayName: 'Calazans', localMode: true })
       setAuthLoading(false)
