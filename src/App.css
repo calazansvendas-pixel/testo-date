@@ -123,11 +123,6 @@
   font-weight: 600;
 }
 
-.signout-icon {
-  color: var(--muted);
-  font-size: 15px;
-}
-
 .content-wrap {
   width: min(1120px, calc(100% - 56px));
   margin: 0 auto;
@@ -1109,8 +1104,7 @@
     gap: 7px;
   }
 
-  .account-name,
-  .signout-icon {
+  .account-name {
     display: none;
   }
 

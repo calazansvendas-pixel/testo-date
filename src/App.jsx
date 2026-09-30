@@ -14,7 +14,7 @@ import { createDose, deleteDose, subscribeToDoses, updateDose } from './features
 import { createLocalDose, deleteLocalDose, readLocalDoses, updateLocalDose, writeLocalDoses } from './features/doses/localDoseStore.js'
 import ConfirmDialog from './components/ConfirmDialog.jsx'
 import DoseForm from './components/DoseForm.jsx'
-import { getSuggestedDoseDate, getSuggestedNextSide, toDateTimeLocalValue } from './lib/dates.js'
+import { getSuggestedDoseDate, getSuggestedNextSide } from './lib/dates.js'
 import { playAlertTone, showDoseNotification } from './lib/notifications.js'
 import './App.css'
 
@@ -29,6 +29,10 @@ const timeFormatter = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute
 function formatFullDate(date) {
   const formatted = dateFormatter.format(date)
   return formatted.charAt(0).toUpperCase() + formatted.slice(1)
+}
+
+function sortByDateDesc(doses) {
+  return doses.slice().sort((first, second) => new Date(second.dataHora) - new Date(first.dataHora))
 }
 
 function formatCountdown(date, now) {
@@ -198,11 +202,8 @@ function App() {
   }, [notice])
 
   useEffect(() => {
-    if (localStorage.getItem('testo-date-local-mode') === 'true') {
-      setUser({ uid: 'local-calazans', displayName: 'Calazans', localMode: true })
-      setAuthLoading(false)
-      return undefined
-    }
+    // Limpa a flag da sessão local removida em versões anteriores.
+    localStorage.removeItem('testo-date-local-mode')
 
     if (!firebaseReady || !auth) {
       setAuthLoading(false)
@@ -323,13 +324,6 @@ function App() {
     if (!user) {
       setDoses([])
       setStorageMode('connecting')
-      return undefined
-    }
-
-    if (user.localMode) {
-      setDoses(readLocalDoses(user.uid))
-      setStorageMode('local')
-      setLoadingDoses(false)
       return undefined
     }
 
@@ -500,31 +494,7 @@ function App() {
     }
   }
 
-  function handleLocalLogin() {
-    try {
-      localStorage.setItem('testo-date-local-mode', 'true')
-      sessionStorage.removeItem('testo-date-auth-pending')
-      setError('')
-      setErrorDetails('')
-      setUser({ uid: 'local-calazans', displayName: 'Calazans', localMode: true })
-      setStorageMode('local')
-      setNotice('Sessão local iniciada. Seus registros ficam neste dispositivo.')
-    } catch (storageError) {
-      reportFailure('localStorage / iniciar modo local', storageError, 'O navegador bloqueou o armazenamento local. Ative o armazenamento deste site e tente novamente.')
-    }
-  }
-
   async function handleSignOut() {
-    if (user?.localMode) {
-      localStorage.removeItem('testo-date-local-mode')
-      setUser(null)
-      setStorageMode('connecting')
-      setError('')
-      setErrorDetails('')
-      setNotice('Sessão local encerrada.')
-      return
-    }
-
     try {
       sessionStorage.removeItem('testo-date-auth-pending')
       if (auth) await signOut(auth)
@@ -583,7 +553,7 @@ function App() {
       dose = createLocalDose(user.uid, changes)
     }
 
-    setDoses(readLocalDoses(user.uid).sort((first, second) => new Date(second.dataHora) - new Date(first.dataHora)))
+    setDoses(sortByDateDesc(readLocalDoses(user.uid)))
     setStorageMode('local')
     return dose
   }
@@ -616,7 +586,7 @@ function App() {
     try {
       if (storageMode === 'local' || deleteTarget.localOnly) {
         deleteLocalDose(user.uid, deleteTarget.id)
-        setDoses(readLocalDoses(user.uid))
+        setDoses(sortByDateDesc(readLocalDoses(user.uid)))
         setNotice('Registro removido somente deste dispositivo.')
       } else {
         await deleteDose(user.uid, deleteTarget.id)
@@ -628,7 +598,7 @@ function App() {
       setStorageMode('local')
       try {
         deleteLocalDose(user.uid, deleteTarget.id)
-        setDoses(readLocalDoses(user.uid))
+        setDoses(sortByDateDesc(readLocalDoses(user.uid)))
         setDeleteTarget(null)
       } catch (localError) {
         reportFailure('localStorage / excluir aplicação', localError, 'Não foi possível remover o registro localmente.')
@@ -721,11 +691,10 @@ function App() {
             {darkMode ? '☼' : '☾'}
           </button>
           <div className="account-menu">
-            <button className="account-button" type="button" title="Perfil da conta">
+            <span className="account-button" title={user.email ?? 'Perfil da conta'}>
               <span className="account-avatar">{user.displayName?.charAt(0) ?? 'U'}</span>
               <span className="account-name">{user.displayName?.split(' ')[0] ?? 'Conta'}</span>
-              <span className="signout-icon" aria-hidden="true">▾</span>
-            </button>
+            </span>
             <button className="account-menu-action" type="button" onClick={handleSignOut}>Sair</button>
           </div>
         </div>
@@ -853,6 +822,7 @@ function App() {
         <DoseForm
           dose={formDose}
           suggestedDate={getSuggestedDoseDate(doses)}
+          suggestedSide={suggestedNextSide}
           onSave={handleSaveDose}
           onClose={() => setFormOpen(false)}
           saving={saving}

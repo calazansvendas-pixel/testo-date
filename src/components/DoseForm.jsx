@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { formatWeekday, toDateTimeLocalValue } from '../lib/dates.js'
 
-export default function DoseForm({ dose, suggestedDate, onSave, onClose, saving }) {
+export default function DoseForm({ dose, suggestedDate, suggestedSide, onSave, onClose, saving }) {
   const [dataHora, setDataHora] = useState(toDateTimeLocalValue(dose?.dataHora ?? suggestedDate))
   const [status, setStatus] = useState(dose?.status ?? 'Pendente')
-  const [side, setSide] = useState(dose?.side ?? 'Direito')
+  const [side, setSide] = useState(dose?.side ?? suggestedSide ?? 'Direito')
   const [observacao, setObservacao] = useState(dose?.observacao ?? '')
   const [error, setError] = useState('')
 
