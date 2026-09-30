@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { formatWeekday, toDateTimeLocalValue } from '../lib/dates.js'
 
 export default function DoseForm({ dose, suggestedDate, onSave, onClose, saving }) {
@@ -7,6 +7,15 @@ export default function DoseForm({ dose, suggestedDate, onSave, onClose, saving 
   const [side, setSide] = useState(dose?.side ?? 'Direito')
   const [observacao, setObservacao] = useState(dose?.observacao ?? '')
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (event.key === 'Escape' && !saving) onClose()
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [saving, onClose])
 
   function handleSubmit(event) {
     event.preventDefault()
@@ -21,7 +30,6 @@ export default function DoseForm({ dose, suggestedDate, onSave, onClose, saving 
     onSave({
       dataHora: selectedDate.toISOString(),
       diaSemana: formatWeekday(selectedDate),
-      lado: side,
       side,
       status,
       observacao: observacao.trim(),
@@ -33,7 +41,7 @@ export default function DoseForm({ dose, suggestedDate, onSave, onClose, saving 
   }
 
   return (
-    <div className="dialog-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+    <div className="dialog-backdrop" onMouseDown={(event) => event.target === event.currentTarget && !saving && onClose()}>
       <section className="dialog-panel" role="dialog" aria-modal="true" aria-labelledby="dose-form-title">
         <div className="dialog-heading">
           <div>
@@ -47,6 +55,8 @@ export default function DoseForm({ dose, suggestedDate, onSave, onClose, saving 
           <div className="side-toggle" role="tablist" aria-label="Seleção de lado">
             <button
               type="button"
+              role="tab"
+              aria-selected={side === 'Esquerdo'}
               className={side === 'Esquerdo' ? 'side-option active' : 'side-option'}
               onClick={() => setSide('Esquerdo')}
             >
@@ -54,6 +64,8 @@ export default function DoseForm({ dose, suggestedDate, onSave, onClose, saving 
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={side === 'Direito'}
               className={side === 'Direito' ? 'side-option active' : 'side-option'}
               onClick={() => setSide('Direito')}
             >

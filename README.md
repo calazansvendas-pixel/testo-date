@@ -13,7 +13,7 @@ As regras do banco estão em `firestore.rules`. Publique-as pelo Firebase Consol
 
 ## Segurança e dados
 
-O app requer a conta Google informada em `VITE_AUTHORIZED_EMAIL`. As regras em `firestore.rules` devem conter o mesmo e-mail autorizado, exigir e-mail verificado e restringir cada caminho ao UID autenticado. O documento contém `id`, `dataHora` ISO, `status`, `observacao` e `dataCriacao`.
+O app requer a conta Google informada em `VITE_AUTHORIZED_EMAIL`. As regras em `firestore.rules` devem conter o mesmo e-mail autorizado, exigir e-mail verificado e restringir cada caminho ao UID autenticado. O documento contém `id`, `dataHora` ISO, `diaSemana`, `side` (`Direito`/`Esquerdo`), `status`, `observacao` e `dataCriacao`.
 
 As credenciais `VITE_FIREBASE_*` identificam o projeto e são públicas no bundle do navegador. A privacidade dos dados depende de Authentication e das regras do Firestore, nunca de manter a API key secreta.
 

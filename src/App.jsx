@@ -14,7 +14,7 @@ import { createDose, deleteDose, subscribeToDoses, updateDose } from './features
 import { createLocalDose, deleteLocalDose, readLocalDoses, updateLocalDose, writeLocalDoses } from './features/doses/localDoseStore.js'
 import ConfirmDialog from './components/ConfirmDialog.jsx'
 import DoseForm from './components/DoseForm.jsx'
-import { getSuggestedDoseDate, toDateTimeLocalValue } from './lib/dates.js'
+import { getSuggestedDoseDate, getSuggestedNextSide, toDateTimeLocalValue } from './lib/dates.js'
 import { playAlertTone, showDoseNotification } from './lib/notifications.js'
 import './App.css'
 
@@ -427,10 +427,10 @@ function App() {
     !latest || new Date(dose.dataHora) > new Date(latest.dataHora) ? dose : latest
   ), null)
   const forecast = !pendingDoses.length && latestCompleted
-    ? { dataHora: getSuggestedDoseDate(doses), status: 'Pendente', forecast: true, side: latestCompleted.side === 'Direito' ? 'Esquerdo' : 'Direito' }
+    ? { dataHora: getSuggestedDoseDate(doses), status: 'Pendente', forecast: true, side: getSuggestedNextSide(doses) }
     : null
   const nextDose = pendingDoses[0] ?? forecast
-  const suggestedNextSide = nextDose?.side || (latestCompleted?.side === 'Direito' ? 'Esquerdo' : 'Direito') || 'Direito'
+  const suggestedNextSide = nextDose?.side || getSuggestedNextSide(doses)
 
   async function handleLogin() {
     if (!firebaseReady || !auth) return

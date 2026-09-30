@@ -9,7 +9,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icon.svg', 'icon-maskable.svg'],
+      includeAssets: ['assets/logo-calazans.png'],
       manifest: {
         name: 'testo-date',
         short_name: 'testo-date',
@@ -20,8 +20,8 @@ export default defineConfig({
         display: 'standalone',
         start_url: '/',
         icons: [
-          { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-          { src: '/icon-maskable.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
+          { src: '/assets/logo-calazans.png', sizes: '125x118', type: 'image/png', purpose: 'any' },
+          { src: '/assets/logo-calazans.png', sizes: '125x118', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
