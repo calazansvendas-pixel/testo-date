@@ -720,7 +720,7 @@ function App() {
               <span className="account-name">{user.displayName?.split(' ')[0] ?? 'Conta'}</span>
               <span className="signout-icon" aria-hidden="true">▾</span>
             </button>
-            <button className="account-menu-action" type="button" onClick={handleSignOut}>Sair da conta</button>
+            <button className="account-menu-action" type="button" onClick={handleSignOut}>Sair</button>
           </div>
         </div>
       </header>
