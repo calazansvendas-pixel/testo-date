@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { addCalendarDays, getSuggestedDoseDate, toDateTimeLocalValue } from './dates.js'
+import { addCalendarDays, formatWeekday, getSuggestedDoseDate, getSuggestedNextSide, toDateTimeLocalValue } from './dates.js'
 
 test('adds ten calendar days and preserves the local time', () => {
   const base = new Date(2026, 0, 25, 14, 35)
@@ -31,4 +31,19 @@ test('formats a date for the editable local date and time field', () => {
   const value = toDateTimeLocalValue(new Date(2026, 5, 9, 8, 7))
 
   assert.equal(value, '2026-06-09T08:07')
+})
+
+test('suggests the opposite side after the latest dose', () => {
+  const doses = [
+    { dataHora: '2026-03-01T12:00:00.000Z', side: 'Direito' },
+    { dataHora: '2026-03-05T12:00:00.000Z', side: 'Esquerdo' },
+  ]
+
+  assert.equal(getSuggestedNextSide(doses), 'Direito')
+})
+
+test('formats the weekday in Portuguese for stored records', () => {
+  const weekday = formatWeekday('2026-03-10T12:00:00.000Z')
+
+  assert.equal(weekday, 'Terça-Feira')
 })

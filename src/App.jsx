@@ -74,6 +74,11 @@ function StatusBadge({ status }) {
   return <span className={`status-badge ${status === 'Concluído' ? 'status-complete' : 'status-pending'}`}>{status}</span>
 }
 
+function SideBadge({ side }) {
+  const colorClass = side === 'Direito' ? 'side-right' : 'side-left'
+  return <span className={`side-badge ${colorClass}`}>{side === 'Direito' ? 'Direito' : 'Esquerdo'}</span>
+}
+
 function DoseRow({ dose, onEdit, onDelete, onToggleStatus }) {
   const [expanded, setExpanded] = useState(false)
   const date = new Date(dose.dataHora)
@@ -84,8 +89,8 @@ function DoseRow({ dose, onEdit, onDelete, onToggleStatus }) {
         <span className="dose-date-marker" aria-hidden="true"><span /></span>
         <span className="dose-row-date">
           <strong>{dateFormatter.format(date)}</strong>
-          <small>às {timeFormatter.format(date)}</small>
-          {dose.localOnly && <small className="local-storage-note">Somente neste dispositivo</small>}
+          <small>{dose.diaSemana || 'Dia da semana'} • {timeFormatter.format(date)}</small>
+          <small className="dose-meta-row"><SideBadge side={dose.side || 'Direito'} /> {dose.localOnly && <span className="local-storage-note">Somente neste dispositivo</span>}</small>
         </span>
         <StatusBadge status={dose.status} />
         <span className={`chevron ${expanded ? 'chevron-open' : ''}`} aria-hidden="true">⌄</span>
@@ -106,31 +111,29 @@ function DoseRow({ dose, onEdit, onDelete, onToggleStatus }) {
   )
 }
 
-function LoginScreen({ error, errorDetails, onLogin, onLocalLogin, busy, googleAvailable }) {
+function LoginScreen({ error, errorDetails, onLogin, busy, googleAvailable }) {
   return (
     <main className="login-shell">
       <section className="login-panel">
-        <div className="brand-lockup">
-          <span className="brand-symbol" aria-hidden="true"><span /></span>
-          <span>testo<span className="brand-dot">.</span>date</span>
+        <div className="login-brand-wrap">
+          <img className="login-logo" src="/assets/logo-calazans.png" alt="Calazans Vendas" />
         </div>
-        <p className="eyebrow">REGISTRO PESSOAL</p>
-        <h1>Seu histórico, no seu ritmo.</h1>
-        <p className="login-copy">Entre com sua conta Google para acessar seus registros com segurança.</p>
+
+        <div className="login-heading-block">
+          <p className="eyebrow">REGISTRO PESSOAL</p>
+          <h1>Controle de Aplicações</h1>
+        </div>
+
         {error && <p className="inline-error" role="alert">{error}</p>}
         {errorDetails && <details className="error-details"><summary>Detalhes técnicos</summary><code>{errorDetails}</code></details>}
+
         <div className="login-options">
           <button className="button button-primary login-button" type="button" onClick={onLogin} disabled={busy || !googleAvailable}>
             <GoogleMark />
             {busy ? 'Abrindo acesso…' : 'Continuar com Google'}
           </button>
           {!googleAvailable && <p className="field-hint">Configure o Firebase para ativar o acesso Google.</p>}
-          <p className="login-divider">OU USE O MODO LOCAL</p>
-          <button className="button button-secondary local-login-button" type="button" onClick={onLocalLogin} disabled={busy}>
-            Entrar como Calazans (Modo Local)
-          </button>
         </div>
-        <p className="privacy-note">No modo local, os registros ficam apenas neste navegador e não são enviados ao Firebase.</p>
       </section>
     </main>
   )
@@ -232,19 +235,33 @@ function App() {
           return
         }
 
+        if (auth.currentUser) {
+          sessionStorage.removeItem('testo-date-auth-pending')
+          setError('')
+          setErrorDetails('')
+          setUser(auth.currentUser)
+          setAuthLoading(false)
+          return
+        }
+
         if (redirectPending) {
           sessionStorage.removeItem('testo-date-auth-pending')
-          reportFailure(
-            'Firebase Auth / retorno Google',
-            new Error('O redirect terminou sem usuário autenticado nesta sessão.'),
-            'O Google respondeu, mas o app não recebeu uma sessão válida. Verifique o domínio autorizado e a configuração do Firebase Authentication.',
-          )
         }
       })
       .catch((authError) => {
         if (!active) return
-        sessionStorage.removeItem('testo-date-auth-pending')
-        reportFailure('Firebase Auth / retorno Google', authError, authErrorMessage(authError))
+        if (auth.currentUser) {
+          sessionStorage.removeItem('testo-date-auth-pending')
+          setError('')
+          setErrorDetails('')
+          setUser(auth.currentUser)
+          setAuthLoading(false)
+          return
+        }
+        if (authError?.code || authError?.message) {
+          sessionStorage.removeItem('testo-date-auth-pending')
+          reportFailure('Firebase Auth / retorno Google', authError, authErrorMessage(authError))
+        }
       })
 
     const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
@@ -405,9 +422,10 @@ function App() {
     !latest || new Date(dose.dataHora) > new Date(latest.dataHora) ? dose : latest
   ), null)
   const forecast = !pendingDoses.length && latestCompleted
-    ? { dataHora: getSuggestedDoseDate(doses), status: 'Pendente', forecast: true }
+    ? { dataHora: getSuggestedDoseDate(doses), status: 'Pendente', forecast: true, side: latestCompleted.side === 'Direito' ? 'Esquerdo' : 'Direito' }
     : null
   const nextDose = pendingDoses[0] ?? forecast
+  const suggestedNextSide = nextDose?.side || (latestCompleted?.side === 'Direito' ? 'Esquerdo' : 'Direito') || 'Direito'
 
   async function handleLogin() {
     if (!firebaseReady || !auth) return
@@ -420,18 +438,22 @@ function App() {
       const provider = new GoogleAuthProvider()
       provider.setCustomParameters({ prompt: 'select_account' })
 
-      const preferRedirect = window.matchMedia('(max-width: 768px)').matches
-        || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+        || window.matchMedia('(max-width: 768px)').matches
         || window.matchMedia('(display-mode: standalone)').matches
+      const shouldUsePopup = window.location.hostname === 'localhost'
+        || window.location.hostname === '127.0.0.1'
+        || !isMobile
 
-      if (preferRedirect) {
-        sessionStorage.setItem('testo-date-auth-pending', 'google')
-        console.info('[testo-date] Firebase Auth / iniciando redirect Google', {
-          authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'testo-date.firebaseapp.com',
-          currentOrigin: window.location.origin,
-          preferRedirect,
-        })
-        await signInWithRedirect(auth, provider)
+      if (shouldUsePopup) {
+        const result = await signInWithPopup(auth, provider)
+        if (result?.user?.email?.toLowerCase() !== authorizedEmail) {
+          throw new Error('A conta autenticada não está autorizada para este app.')
+        }
+        setUser(result.user)
+        setError('')
+        setErrorDetails('')
+        setAuthLoading(false)
         return
       }
 
@@ -447,6 +469,12 @@ function App() {
       } catch (popupError) {
         if (popupError?.code === 'auth/popup-blocked' || popupError?.code === 'auth/popup-closed-by-user' || popupError?.message?.includes('popup')) {
           sessionStorage.setItem('testo-date-auth-pending', 'google')
+          console.info('[testo-date] Firebase Auth / popup bloqueado, usando redirect', {
+            code: popupError?.code,
+            message: popupError?.message,
+            isMobile,
+            hostname: window.location.hostname,
+          })
           await signInWithRedirect(auth, provider)
           return
         }
@@ -664,7 +692,6 @@ function App() {
       error={error}
       errorDetails={errorDetails}
       onLogin={handleLogin}
-      onLocalLogin={handleLocalLogin}
       busy={authBusy}
       googleAvailable={firebaseReady}
     />
@@ -743,6 +770,7 @@ function App() {
                 <p className="countdown">{formatCountdown(nextDose.dataHora, now)}</p>
                 <h2>{dateFormatter.format(new Date(nextDose.dataHora))}</h2>
                 <p className="next-time">às {timeFormatter.format(new Date(nextDose.dataHora))}</p>
+                <p className="next-side-suggestion">Próximo lado sugerido: {suggestedNextSide === 'Direito' ? 'Lado Direito' : 'Lado Esquerdo'}</p>
                 {nextDose.forecast && <p className="forecast-note">Previsão calculada a partir da última aplicação concluída + 10 dias.</p>}
                 {!nextDose.forecast && nextDose.observacao && <p className="next-note">{nextDose.observacao}</p>}
                 <button className="next-edit" type="button" onClick={() => nextDose.forecast ? openNewDose() : openEditDose(nextDose)}>

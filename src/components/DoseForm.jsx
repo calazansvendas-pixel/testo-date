@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { toDateTimeLocalValue } from '../lib/dates.js'
+import { formatWeekday, toDateTimeLocalValue } from '../lib/dates.js'
 
 export default function DoseForm({ dose, suggestedDate, onSave, onClose, saving }) {
   const [dataHora, setDataHora] = useState(toDateTimeLocalValue(dose?.dataHora ?? suggestedDate))
   const [status, setStatus] = useState(dose?.status ?? 'Pendente')
+  const [side, setSide] = useState(dose?.side ?? 'Direito')
   const [observacao, setObservacao] = useState(dose?.observacao ?? '')
   const [error, setError] = useState('')
 
@@ -19,9 +20,16 @@ export default function DoseForm({ dose, suggestedDate, onSave, onClose, saving 
     setError('')
     onSave({
       dataHora: selectedDate.toISOString(),
+      diaSemana: formatWeekday(selectedDate),
+      lado: side,
+      side,
       status,
       observacao: observacao.trim(),
     })
+  }
+
+  function handleQuickApply() {
+    setDataHora(toDateTimeLocalValue(new Date()))
   }
 
   return (
@@ -36,6 +44,29 @@ export default function DoseForm({ dose, suggestedDate, onSave, onClose, saving 
         </div>
 
         <form onSubmit={handleSubmit} className="form-stack">
+          <div className="side-toggle" role="tablist" aria-label="Seleção de lado">
+            <button
+              type="button"
+              className={side === 'Esquerdo' ? 'side-option active' : 'side-option'}
+              onClick={() => setSide('Esquerdo')}
+            >
+              Lado Esquerdo
+            </button>
+            <button
+              type="button"
+              className={side === 'Direito' ? 'side-option active' : 'side-option'}
+              onClick={() => setSide('Direito')}
+            >
+              Lado Direito
+            </button>
+          </div>
+
+          <div className="quick-apply-row">
+            <button type="button" className="button button-secondary quick-apply-button" onClick={handleQuickApply}>
+              Aplicar agora
+            </button>
+          </div>
+
           <label className="field-label" htmlFor="dose-date">Data e horário</label>
           <input
             autoFocus
