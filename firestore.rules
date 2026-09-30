@@ -10,14 +10,13 @@ service cloud.firestore {
       }
 
       function validDose() {
-        return request.resource.data.keys().hasAll(['id', 'dataHora', 'diaSemana', 'side', 'status', 'observacao', 'dataCriacao'])
+        return request.resource.data.keys().hasAll(['id', 'dataHora', 'status', 'observacao', 'dataCriacao'])
           && request.resource.data.keys().hasOnly(['id', 'dataHora', 'diaSemana', 'side', 'status', 'observacao', 'dataCriacao'])
           && request.resource.data.id == doseId
           && request.resource.data.dataHora is string
           && request.resource.data.dataHora.size() > 0
-          && request.resource.data.diaSemana is string
-          && request.resource.data.diaSemana.size() > 0
-          && request.resource.data.side in ['Direito', 'Esquerdo']
+          && (!('diaSemana' in request.resource.data) || (request.resource.data.diaSemana is string && request.resource.data.diaSemana.size() > 0))
+          && (!('side' in request.resource.data) || request.resource.data.side in ['Direito', 'Esquerdo'])
           && request.resource.data.status in ['Concluído', 'Pendente']
           && request.resource.data.observacao is string
           && request.resource.data.observacao.size() <= 4000

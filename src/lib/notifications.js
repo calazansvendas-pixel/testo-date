@@ -29,5 +29,5 @@ export async function showDoseNotification(title, body, tag) {
   if (!('serviceWorker' in navigator) || Notification.permission !== 'granted') return
 
   const registration = await navigator.serviceWorker.ready
-  await registration.showNotification(title, { body, icon: '/icon.svg', tag })
+  await registration.showNotification(title, { body, icon: '/assets/logo-calazans.png', tag })
 }
